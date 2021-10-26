@@ -6549,7 +6549,11 @@ static void lcd_main_menu()
 
 
     MENU_ITEM_BACK_P(_T(MSG_WATCH));
-
+if (!PRINTER_ACTIVE || isPrintPaused)
+    {
+      MENU_ITEM_GCODE_P(_i("Fill Boom Nuggets"), PSTR("M777"));
+    }
+	
 #ifdef RESUME_DEBUG 
     if (!saved_printing) 
         MENU_ITEM_FUNCTION_P(PSTR("tst - Save"), lcd_menu_test_save);
