@@ -3861,6 +3861,82 @@ static void gcode_M600(bool automatic, float x_position, float y_position, float
     custom_message_type = CustomMsg::Status;
 }
 
+static void gcode_M777(float x_position, float y_position, float z_position)
+{
+
+    int bump_delay_time = 1000; //in ms
+    int bump_distance = 5;
+    int bump_speed = 200;
+
+    st_synchronize();
+
+    float lastpos[3];
+
+    lastpos[X_AXIS] = current_position[X_AXIS];
+    lastpos[Y_AXIS] = current_position[Y_AXIS];
+    lastpos[Z_AXIS] = current_position[Z_AXIS];
+    
+    //Lift Z
+    current_position[Z_AXIS] += 10.5f;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+    //Move XYZ to under fill hopper
+    current_position[Z_AXIS] = z_position;
+    current_position[X_AXIS] = x_position;
+    current_position[Y_AXIS] = y_position;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+    //Move XYZ to under fill hopper
+    current_position[Z_AXIS] += 4;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+    
+    int i;
+    //Bump Pellet Filler
+    for( i=0; i < 20; ++i)
+    {
+      current_position[Z_AXIS] += bump_distance;
+      plan_buffer_line_curposXYZE(bump_speed);
+      st_synchronize();
+
+      _delay(bump_delay_time);
+
+      current_position[Z_AXIS] -= bump_distance;
+      plan_buffer_line_curposXYZE(bump_speed);
+      st_synchronize();
+    
+      _delay(bump_delay_time);
+    }
+
+    //Move XYZ to under fill hopper
+    current_position[Z_AXIS] -= 10;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+    //Move XY back and above original z
+    current_position[X_AXIS] = lastpos[X_AXIS];
+    current_position[Y_AXIS] = lastpos[Y_AXIS];
+    current_position[Z_AXIS] = lastpos[Z_AXIS] + 25;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+    //Move Z back
+    current_position[Z_AXIS] = lastpos[Z_AXIS];
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+}
+
+
+
+
+
+
+
+
+
 void gcode_M701()
 {
 	printf_P(PSTR("gcode_M701 begin\n"));
@@ -8284,6 +8360,52 @@ Sigma_Exit:
     */
     case 603: {
         lcd_print_stop();
+    }
+    break;
+
+    /*!
+	### M777 - Initiate Nugget change procedure
+    Initiates Boom Nuggest change
+    If the 'M777' is triggered, it will go to Z 125mm
+    Initiates Filament change, it is also used during Filament Runout Sensor process.
+    */
+  case 777: //Pause for energetic fill X[pos] Y[pos] Z[relative lift]]
+   {
+    st_synchronize();
+    
+    float x_position = current_position[X_AXIS];
+    float y_position = current_position[Y_AXIS];
+    float z_position = current_position[Z_AXIS];
+
+    //Lift Z
+    if(code_seen('Z'))
+    {
+      z_position = code_value();
+    }
+    else
+    {
+      z_position = 150;
+    }
+    //Move XY to side
+    if(code_seen('X'))
+    {
+      x_position = code_value();
+    }
+    else
+    {
+      x_position = 246;
+    }
+    if(code_seen('Y'))
+    {
+      y_position = code_value();
+    }
+    else
+    {
+      y_position = current_position[Y_AXIS];
+    }
+    
+    gcode_M777(x_position, y_position, z_position);
+     
     }
     break;
 
