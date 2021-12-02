@@ -7979,7 +7979,7 @@ static bool lcd_selfcheck_check_heater(bool _isbed)
 
 	int _checked_snapshot = (_isbed) ? degBed() : degHotend(0);
 	int _opposite_snapshot = (_isbed) ? degHotend(0) : degBed();
-	int _cycles = (_isbed) ? 180 : 60; //~ 90s / 30s
+	int _cycles = (_isbed) ? 180 : 120; // 180 : 60 Original //~ 90s / 30s
 
 	target_temperature[0] = (_isbed) ? 0 : 200;
 	target_temperature_bed = (_isbed) ? 100 : 0;

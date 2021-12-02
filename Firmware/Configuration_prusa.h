@@ -1,4 +1,4 @@
-#ifndef CONFIGURATION_PRUSA_H
+ #ifndef CONFIGURATION_PRUSA_H
 #define CONFIGURATION_PRUSA_H
 
 #include <limits.h>
@@ -347,7 +347,7 @@
 #endif
 
 // Extrude mintemp
-#define EXTRUDE_MINTEMP 175
+#define EXTRUDE_MINTEMP 30 //175 ORIGINAL
 
 // Extruder cooling fans
 #define EXTRUDER_0_AUTO_FAN_PIN   8
