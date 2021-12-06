@@ -10,7 +10,7 @@
 #define BED_X0 (2.f - BED_ZERO_REF_X) //1
 #define BED_Y0 (9.4f - BED_ZERO_REF_Y) //1
 #define BED_Xn (196.f - BED_ZERO_REF_X) //205
-#define BED_Yn (203f - BED_ZERO_REF_Y) //205
+#define BED_Yn (203.f - BED_ZERO_REF_Y) //205
 
 #else
 
