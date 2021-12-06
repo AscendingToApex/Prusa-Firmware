@@ -7,17 +7,17 @@
 
 #ifdef HEATBED_V2
 
-#define BED_X0 (2.f - BED_ZERO_REF_X) //1
-#define BED_Y0 (9.4f - BED_ZERO_REF_Y) //1
-#define BED_Xn (196.f - BED_ZERO_REF_X) //205
-#define BED_Yn (203.f - BED_ZERO_REF_Y) //205
+#define BED_X0 (25.f - BED_ZERO_REF_X) //1
+#define BED_Y0 (50.f - BED_ZERO_REF_Y) //1
+#define BED_Xn (175.f - BED_ZERO_REF_X) //205
+#define BED_Yn (175.f - BED_ZERO_REF_Y) //205
 
 #else
 
-#define BED_X0 (13.f - BED_ZERO_REF_X)
-#define BED_Y0 (8.4f - BED_ZERO_REF_Y)
-#define BED_Xn (206.f - BED_ZERO_REF_X)
-#define BED_Yn (192.4f - BED_ZERO_REF_Y)
+#define BED_X0 (25.f - BED_ZERO_REF_X)
+#define BED_Y0 (50.f - BED_ZERO_REF_Y)
+#define BED_Xn (175.f - BED_ZERO_REF_X)
+#define BED_Yn (175f - BED_ZERO_REF_Y)
 
 #endif //not HEATBED_V2
 
