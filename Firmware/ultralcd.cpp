@@ -2862,6 +2862,160 @@ void lcd_move_RPM()
   }
 }
 
+
+//Test Print Routine
+void lcd_Test_Print()
+{ 
+	//Move head to center
+	current_position[Z_AXIS] = 50;
+    current_position[X_AXIS] = 100;
+    current_position[Y_AXIS] = 100;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+	//Declare and set bed and nozzle temperature
+	float bedTemperature = 40.f;
+	float nozzleTemperature = 70.f;
+	setTargetBed(bedTemperature); 
+	setTargetHotend0(nozzleTemperature);
+
+	while (degHotend0() < nozzleTemperature || degBed() < bedTemperature)
+	{
+		menu_draw_float31(PSTR("Nozzle & Bed Heating...")
+	}
+
+	//Warm-up to allow for even distribution on lead screw
+  	if (degHotend0() > (nozzleTemperature -2))
+  	{
+		float RPM = 0.25f;
+    	float DriveRadius = 7.3/2; //mm
+    	//*12 to accound for the planetary gear box
+    	float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+		int i; //Designates number of revolutions
+		for(i=0, i <1;++ i)
+		{
+			current_position[E_Axis] +=22.86 //distance for one revolution
+			plan_buffer_line_curposXYZE(TestFeedRate);
+			st_synchronize();
+		}
+    }
+
+    //Move to inert staging area
+    current_position[Z_AXIS] = 50;
+    current_position[X_AXIS] = 25;
+    current_position[Y_AXIS] = 175;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+	//Fill  Inert Material
+	enquecommand_P(PSTR("M778"));
+	
+	//Extruder material with user input for verification
+	RPM = 5.f;
+    //*12 to accound for the planetary gear box
+    TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+	current_position[E_Axis] +=22.86*2.5 //distance for one revolution
+	plan_buffer_line_curposXYZE(TestFeedRate);
+	st_synchronize();
+
+	KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Was inert material extruded?"),
+            false, true);
+    if (lcd_change_fil_state == 0)
+    {
+		lcd_clear();
+		lcd_puts_at_P(0, 2, _T(MSG_PLEASE_WAIT));
+		current_position[E_Axis] +=22.86*2.5 //distance for one revolution
+		plan_buffer_line_curposXYZE(TestFeedRate);
+		st_synchronize();
+    }
+
+	//Wipe routine for nozzle
+	enquecommand_P(PSTR("G1 Y-3.0 F200.0")); //go outside print area
+	enquecommand_P(PSTR("G92 E0.0"));
+	enquecommand_P(PSTR("G1 X60.0 E9.0 F200.0 ;")); //Intro line
+	enquecommand_P(PSTR("G1 X100.0 E12.5 F200.0")); //Intro line
+	enquecommand_P(PSTR("G92 E0.0"));
+
+	//Move to boom staging area
+	//enquecommand_P(PSTR("G90 X50.0 Y175.0 F200.0"));
+    current_position[Z_AXIS] = 50;
+    current_position[X_AXIS] = 175;
+    current_position[Y_AXIS] = 175;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+	//Fill Boom Nuggets
+	enquecommand_P(PSTR("M777"));
+
+	//Extrude Boom material in boom staging area
+  	if (degHotend0() > (nozzleTemperature -2))
+  	{
+		float RPM = 5.f;
+    	float DriveRadius = 7.3/2; //mm
+    	//*12 to accound for the planetary gear box
+    	float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+		int i; //Designates number of revolutions
+		for(i=0, i <15;==i)
+		{
+			current_position[E_Axis] +=22.86 //distance for one revolution
+			plan_buffer_line_curposXYZE(TestFeedRate);
+			st_synchronize();
+		}
+    }
+
+	//Wipe routine
+	enquecommand_P(PSTR("G1 Y-3.0 F200.0")); //go outside print area
+	enquecommand_P(PSTR("G92 E0.0"));
+	enquecommand_P(PSTR("G1 X60.0 E9.0 F200.0 ;")); //Intro line
+	enquecommand_P(PSTR("G1 X100.0 E12.5 F200.0")); //Intro line
+	enquecommand_P(PSTR("G92 E0.0"));
+
+	//Move head to center
+	current_position[Z_AXIS] = 50;
+    current_position[X_AXIS] = 100;
+    current_position[Y_AXIS] = 100;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+
+	//Hardcoded simple geometry for sample print
+
+	 //Move to inert staging area
+    current_position[Z_AXIS] = 50;
+    current_position[X_AXIS] = 25;
+    current_position[Y_AXIS] = 175;
+    plan_buffer_line_curposXYZE(200);
+    st_synchronize();
+	
+	//Refill Inert material
+	enquecommand_P(PSTR("M778"));
+
+	//Purge Inert Material
+	current_position[E_Axis] +=22.86*2.5 //distance for one revolution
+	plan_buffer_line_curposXYZE(TestFeedRate);
+	st_synchronize();
+
+	KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Is there still material extruding"),
+            false, true);
+    if (lcd_change_fil_state == 1)
+    {
+		lcd_clear();
+		lcd_puts_at_P(0, 2, _T(MSG_PLEASE_WAIT));
+		current_position[E_Axis] +=22.86*2.5 //distance for one revolution
+		plan_buffer_line_curposXYZE(TestFeedRate);
+		st_synchronize();
+    }
+
+	//Test print finished, cooldown nozzle and bed
+	SetTargetBed(0);
+	setTargetHotend0(0);
+}
+
+
 //! @brief Show measured Y distance of front calibration points from Y_MIN_POS
 //! If those points are detected too close to edge of reachable area, their confidence is lowered.
 //! This functionality is applied more often for MK2 printers.
@@ -6600,6 +6754,7 @@ static void lcd_main_menu()
 if (!PRINTER_ACTIVE || isPrintPaused)
     {
       MENU_ITEM_GCODE_P(_i("Fill Boom Nuggets"), PSTR("M777"));
+	  MENU_ITEM_FUNCTION_P(PSTR("Test Print"), lcd_test_print);
     }
 	
 #ifdef RESUME_DEBUG 
