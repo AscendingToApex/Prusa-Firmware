@@ -3861,81 +3861,614 @@ static void gcode_M600(bool automatic, float x_position, float y_position, float
     custom_message_type = CustomMsg::Status;
 }
 
+//Purge Routine
 static void gcode_M777(float x_position, float y_position, float z_position)
 {
+  //Move to inert staging area
+  current_position[Z_AXIS] = 25;
+  current_position[X_AXIS] = 50;
+  current_position[Y_AXIS] = 175;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize();
 
-    int bump_delay_time = 1000; //in ms
-    int bump_distance = 5;
-    int bump_speed = 200;
+  //Retain current position to move back to 
+  float lastpos[3];
+  lastpos[X_AXIS] = current_position[X_AXIS];
+  lastpos[Y_AXIS] = current_position[Y_AXIS];
+  lastpos[Z_AXIS] = current_position[Z_AXIS];
 
+  //Move XYZ to approximately below inert hopper
+  current_position[Z_AXIS] = 160;
+  current_position[X_AXIS] = 6;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XYZ to under inert hopper
+  current_position[Z_AXIS] += 4;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Inert material filling parameters <purgeFill (1/1)>
+  //===================================================
+  int bump_delay_time = 1000; //in ms
+  int bump_distance = 5; //mm
+  int bump_speed = 200; //mm per second
+  int bump_qty = 3;
+  //===================================================
+
+  //Inert fill routine
+  int i;
+  for( i=0; i < bump_qty; ++i)
+  {
+    current_position[Z_AXIS] += bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
     st_synchronize();
 
-    float lastpos[3];
+    _delay(bump_delay_time);
 
-    lastpos[X_AXIS] = current_position[X_AXIS];
-    lastpos[Y_AXIS] = current_position[Y_AXIS];
-    lastpos[Z_AXIS] = current_position[Z_AXIS];
+    current_position[Z_AXIS] -= bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
     
-    //Lift Z
-    current_position[Z_AXIS] += 10.5f;
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
+    _delay(bump_delay_time);
+   }
 
-    //Move XYZ to under fill hopper
-    current_position[Z_AXIS] = z_position;
-    current_position[X_AXIS] = x_position;
-    current_position[Y_AXIS] = y_position;
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
+  //Move XYZ to under inert hopper
+  current_position[Z_AXIS] -= 10;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
 
-    //Move XYZ to under fill hopper
-    current_position[Z_AXIS] += 4;
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
+  //Move XY back to previously retained position
+  current_position[X_AXIS] = lastpos[X_AXIS];
+  current_position[Y_AXIS] = lastpos[Y_AXIS];
+  current_position[Z_AXIS] = lastpos[Z_AXIS];
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
 
-    
-    int i;
-    //Bump Pellet Filler
-    for( i=0; i < 20; ++i)
+  //Purge extrusion parameters <engPurge>
+  //===========================================
+  float RPM = 5.f;
+  int purgeTime = 2.f; //Minutes
+  //===========================================
+  float DriveRadius = 7.3/2;
+  float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  //Extrude inert material to purge head
+  for(i=0; i < int(RPM*purgeTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+
+  lcd_change_fil_state = 1;
+  while (lcd_change_fil_state != 0)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Is material still extruding?"),
+            false, true);
+    if (lcd_change_fil_state == 1)
     {
-      current_position[Z_AXIS] += bump_distance;
-      plan_buffer_line_curposXYZE(bump_speed);
-      st_synchronize();
-
-      _delay(bump_delay_time);
-
-      current_position[Z_AXIS] -= bump_distance;
-      plan_buffer_line_curposXYZE(bump_speed);
-      st_synchronize();
-    
-      _delay(bump_delay_time);
+      lcd_clear();
+      lcd_puts_at_P(0, 2, _T(MSG_PLEASE_WAIT));
+   
+      int i;
+      for(i=0; i <2;++ i)
+      {
+        current_position[E_AXIS] +=22.86*12; //distance for one revolution
+        plan_buffer_line_curposXYZE(TestFeedRate);
+        st_synchronize();
+      }
     }
+    lcd_update_enable(true);
+    lcd_return_to_status();
+  }
 
-    //Move XYZ to under fill hopper
-    current_position[Z_AXIS] -= 10;
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
+  current_position[E_AXIS] -=22.86*3;
+  plan_buffer_line_curposXYZE(int(TestFeedRate)+20);
+  st_synchronize();
 
-    //Move XY back and above original z
-    current_position[X_AXIS] = lastpos[X_AXIS];
-    current_position[Y_AXIS] = lastpos[Y_AXIS];
-    current_position[Z_AXIS] = lastpos[Z_AXIS] + 25;
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
-
-    //Move Z back
-    current_position[Z_AXIS] = lastpos[Z_AXIS];
-    plan_buffer_line_curposXYZE(200);
-    st_synchronize();
 }
 
+static void gcode_M778(float x_position, float y_position, float z_position)
+{
+   
+  st_synchronize();
+  
+  //Move head to center
+  current_position[Z_AXIS] = 50;
+  current_position[X_AXIS] = 100;
+  current_position[Y_AXIS] = 100;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+  
+  //Warm-up to allow for even temp distribution within head <warmUp>
+  //===================================================================
+  float RPM = 5.f;
+  int warmUpTime = 2.f; //Minutes
+  //===================================================================
+  float DriveRadius = 7.3/2;
+  float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  st_synchronize();
+  int i;
+  for(i=0; i < int(RPM*warmUpTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+  
+  //Move to inert staging area
+  current_position[Z_AXIS] = z_position; //50;
+  current_position[X_AXIS] = x_position; //6;
+  current_position[Y_AXIS] = y_position; //175;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize();
+
+  float lastpos[3];
+  lastpos[X_AXIS] = current_position[X_AXIS];
+  lastpos[Y_AXIS] = current_position[Y_AXIS];
+  lastpos[Z_AXIS] = current_position[Z_AXIS];
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] = 160;
+  current_position[X_AXIS] = 6;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] += 4;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
 
 
+    //Inert material filling parameters for priming <primeFill>
+  //===========================================================
+  int bump_delay_time = 1000; //in ms
+  int bump_distance = 5; //mm
+  int bump_speed = 200; //mm per second
+  int bump_qty = 3;
+  //===========================================================
+
+  //Bump Inert Filler
+  for( i=0; i < bump_qty; ++i)
+  {
+    current_position[Z_AXIS] += bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+
+    _delay(bump_delay_time);
+
+    current_position[Z_AXIS] -= bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+    
+    _delay(bump_delay_time);
+   }
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] -= 10;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XY back and above original z
+  current_position[X_AXIS] = lastpos[X_AXIS];
+  current_position[Y_AXIS] = lastpos[Y_AXIS];
+  current_position[Z_AXIS] = lastpos[Z_AXIS];
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Set Priming parameters <intPrime>
+  //=======================================================
+  RPM = 5.f;
+  float primeTime = 4.f; //Minutes
+  //=======================================================
+  TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  //Prime head routine
+  for(i=0; i < int(RPM*primeTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Was inert material extruded?"),
+            false, true);
+    if (lcd_change_fil_state == 0)
+    {
+      lcd_clear();
+      lcd_puts_at_P(0, 2, _T(MSG_PLEASE_WAIT));
+   
+      int i;
+      for(i=0; i <2;++ i)
+      {
+        current_position[E_AXIS] +=22.86*12; //distance for one revolution
+        plan_buffer_line_curposXYZE(TestFeedRate);
+        st_synchronize();
+      }
+    }
+  }
+
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Was material removed from plate?"),
+            false, true);
+   }
+  
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("10 minute Countdown to exit room begin?"),
+            false, true);
+   }
+   lcd_update_enable(true);
+   lcd_return_to_status();
+
+  current_position[E_AXIS] -=22.86*3;
+  plan_buffer_line_curposXYZE(int(TestFeedRate)+20);
+  st_synchronize();
+
+  //Delay between priming and filling with Boom nuggets <postEngTranDwell>
+  //======================================================================
+  int delayTime = 2; //Minutes
+  //======================================================================
+  
+  for(i=0; i < (delayTime*6); ++i)
+  {
+    _delay(10000);
+  }
+
+ 
+  //Move to boom staging area
+  current_position[Z_AXIS] = 25;
+  current_position[X_AXIS] = 225;
+  current_position[Y_AXIS] = 175;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize(); 
+
+  lastpos[X_AXIS] = current_position[X_AXIS];
+  lastpos[Y_AXIS] = current_position[Y_AXIS];
+  lastpos[Z_AXIS] = current_position[Z_AXIS];
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] = 160;
+  current_position[X_AXIS] = 248;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] += 4;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Fill parameters for Boom Nuggets <engFill>
+  //=================================================
+  bump_delay_time = 1000; //in ms
+  bump_distance = 5; //mm
+  bump_speed = 200; // mm per second
+  bump_qty = 10;
+  //=================================================
+
+  //Fill Boom Nuggets routine
+  for( i=0; i < bump_qty; ++i)
+  {
+    current_position[Z_AXIS] += bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+
+    _delay(bump_delay_time);
+
+    current_position[Z_AXIS] -= bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+    
+    _delay(bump_delay_time);
+   }
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] -= 10;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XY back and above original z
+  current_position[X_AXIS] = lastpos[X_AXIS];
+  current_position[Y_AXIS] = lastpos[Y_AXIS];
+  current_position[Z_AXIS] = lastpos[Z_AXIS];
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Set Boom transfer parameters <engTransfer>
+  //========================================================
+  RPM = 5.f;
+  float transferTime = 2.f; //Minutes
+  //========================================================
+  TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  //Transfer Boom
+  for(i=0; i < int(RPM*transferTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+
+  current_position[E_AXIS] -=22.86*3; //distance for one revolution
+  plan_buffer_line_curposXYZE(int(TestFeedRate)+20);
+  st_synchronize();
+
+  //Move head to center
+  current_position[Z_AXIS] = 50;
+  current_position[X_AXIS] = 100;
+  current_position[Y_AXIS] = 100;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize();
+}
+
+//M779 routine to put in g code in place of M778 to expedite testing and only
+//filling from one hopper (Left)
+static void gcode_M779(float x_position, float y_position, float z_position)
+{
+   
+  st_synchronize();
+  
+  //Move head to center
+  current_position[Z_AXIS] = 50;
+  current_position[X_AXIS] = 100;
+  current_position[Y_AXIS] = 100;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+  
+  /*
+  //Warm-up to allow for even temp distribution within head
+  //===================================================================
+  float RPM = 5.f;
+  int warmUpTime = 2.f; //Minutes
+  //===================================================================
+  float DriveRadius = 7.3/2;
+  float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  st_synchronize();
+  int i;
+  for(i=0; i < int(RPM*warmUpTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+  */
+  
+  //Move to inert staging area
+  current_position[Z_AXIS] = z_position; //50;
+  current_position[X_AXIS] = x_position; //6;
+  current_position[Y_AXIS] = y_position; //175;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize();
+
+  float lastpos[3];
+  lastpos[X_AXIS] = current_position[X_AXIS];
+  lastpos[Y_AXIS] = current_position[Y_AXIS];
+  lastpos[Z_AXIS] = current_position[Z_AXIS];
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] = 160;
+  current_position[X_AXIS] = 6;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] += 4;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
 
 
+    //Inert material filling parameters for priming
+  //===========================================================
+  int bump_delay_time = 1000; //in ms
+  int bump_distance = 5; //mm
+  int bump_speed = 200; //mm per second
+  int bump_qty = 3;
+  //===========================================================
+  float DriveRadius = 7.3/2;
+  int i;
+  
+  //Bump Inert Filler
+  for( i=0; i < bump_qty; ++i)
+  {
+    current_position[Z_AXIS] += bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
 
+    _delay(bump_delay_time);
 
+    current_position[Z_AXIS] -= bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+    
+    _delay(bump_delay_time);
+   }
 
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] -= 10;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XY back and above original z
+  current_position[X_AXIS] = lastpos[X_AXIS];
+  current_position[Y_AXIS] = lastpos[Y_AXIS];
+  current_position[Z_AXIS] = lastpos[Z_AXIS];
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Set Priming parameters
+  //=======================================================
+  float RPM = 5.f;
+  float primeTime = 4.f; //Minutes
+  //=======================================================
+  float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  //Prime head routine
+  for(i=0; i < int(RPM*primeTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Was material extruded?"),
+            false, true);
+    if (lcd_change_fil_state == 0)
+    {
+      lcd_clear();
+      lcd_puts_at_P(0, 2, _T(MSG_PLEASE_WAIT));
+   
+      int i;
+      for(i=0; i <2;++ i)
+      {
+        current_position[E_AXIS] +=22.86*12; //distance for one revolution
+        plan_buffer_line_curposXYZE(TestFeedRate);
+        st_synchronize();
+      }
+    }
+  }
+
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Was material removed from plate?"),
+            false, true);
+   }
+
+  /*
+  lcd_change_fil_state = 0;
+  while (lcd_change_fil_state != 1)
+  {
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("10 minute Countdown to exit room begin?"),
+            false, true);
+   }
+   lcd_update_enable(true);
+   lcd_return_to_status();
+
+  current_position[E_AXIS] -=22.86*3;
+  plan_buffer_line_curposXYZE(int(TestFeedRate)+20);
+  st_synchronize();
+
+  //Delay between priming and filling with Boom nuggets <postEngTranDwell>
+  //======================================================================
+  int delayTime = 5; //Minutes
+  //======================================================================
+  
+  for(i=0; i < (delayTime*6); ++i)
+  {
+    _delay(10000);
+  }
+ 
+  //Move to boom staging area
+  current_position[Z_AXIS] = 25;
+  current_position[X_AXIS] = 225;
+  current_position[Y_AXIS] = 175;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize(); 
+
+  lastpos[X_AXIS] = current_position[X_AXIS];
+  lastpos[Y_AXIS] = current_position[Y_AXIS];
+  lastpos[Z_AXIS] = current_position[Z_AXIS];
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] = 160;
+  current_position[X_AXIS] = 248;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] += 4;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Fill parameters for Boom Nuggets
+  //=================================================
+  bump_delay_time = 1000; //in ms
+  bump_distance = 5; //mm
+  bump_speed = 200; // mm per second
+  bump_qty = 10;
+  //=================================================
+
+  //Fill Boom Nuggets routine
+  for( i=0; i < bump_qty; ++i)
+  {
+    current_position[Z_AXIS] += bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+
+    _delay(bump_delay_time);
+
+    current_position[Z_AXIS] -= bump_distance;
+    plan_buffer_line_curposXYZE(bump_speed);
+    st_synchronize();
+    
+    _delay(bump_delay_time);
+   }
+
+  //Move XYZ to under fill hopper
+  current_position[Z_AXIS] -= 10;
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Move XY back and above original z
+  current_position[X_AXIS] = lastpos[X_AXIS];
+  current_position[Y_AXIS] = lastpos[Y_AXIS];
+  current_position[Z_AXIS] = lastpos[Z_AXIS];
+  plan_buffer_line_curposXYZE(200);
+  st_synchronize();
+
+  //Set Boom transfer parameters
+  //========================================================
+  RPM = 5.f;
+  float transferTime = 2.f; //Minutes
+  //========================================================
+  TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12);
+
+  //Transfer Boom
+  for(i=0; i < int(RPM*transferTime); ++i)
+  {
+    current_position[E_AXIS] +=22.86*12; //distance for one revolution
+    lcd_encoder = 0;
+    plan_buffer_line_curposXYZE(int(TestFeedRate));
+    st_synchronize();
+  }
+
+  current_position[E_AXIS] -=22.86*3; //distance for one revolution
+  plan_buffer_line_curposXYZE(int(TestFeedRate)+20);
+  st_synchronize();
+
+  //Move head to center
+  current_position[Z_AXIS] = 50;
+  current_position[X_AXIS] = 100;
+  current_position[Y_AXIS] = 100;
+  plan_buffer_line_curposXYZE(1000);
+  st_synchronize();
+  */
+}
 
 void gcode_M701()
 {
@@ -4190,7 +4723,7 @@ extern uint8_t st_backlash_y;
 //!@n G4  - Dwell S<seconds> or P<milliseconds>
 //!@n G10 - retract filament according to settings of M207
 //!@n G11 - retract recover filament according to settings of M208
-//!@n G28 - Home all Axes
+//!@n   - Home all Axes
 //!@n G29 - Detailed Z-Probe, probes the bed at 3 or more points.  Will fail if you haven't homed yet.
 //!@n G30 - Single Z Probe, probes bed at current XY location.
 //!@n G31 - Dock sled (Z_PROBE_SLED only)
@@ -8365,12 +8898,9 @@ Sigma_Exit:
     break;
 
     /*!
-	### M777 - Initiate Nugget change procedure
-    Initiates Boom Nuggest change
-    If the 'M777' is triggered, it will go to Z 125mm
-    Initiates Filament change, it is also used during Filament Runout Sensor process.
+	  ### M777 - Initiate boom purge location parameters
     */
-  case 777: //Pause for energetic fill X[pos] Y[pos] Z[relative lift]]
+  case 777: //Inert purge X[pos] Y[pos] Z[relative lift]]
    {
     st_synchronize();
     
@@ -8385,7 +8915,7 @@ Sigma_Exit:
     }
     else
     {
-      z_position = 150;
+      z_position = 125;
     }
     //Move XY to side
     if(code_seen('X'))
@@ -8394,7 +8924,7 @@ Sigma_Exit:
     }
     else
     {
-      x_position = 246;
+      x_position = 50;
     }
     if(code_seen('Y'))
     {
@@ -8402,10 +8932,96 @@ Sigma_Exit:
     }
     else
     {
-      y_position = current_position[Y_AXIS];
+      y_position = 175;
     }
     
     gcode_M777(x_position, y_position, z_position);
+     
+    }
+    break;
+
+    /*!
+	  ### M778 - Initiate initial Boom fill parameters
+    */
+    case 778: //Boom fill X[pos] Y[pos] Z[relative lift]]
+    {
+    st_synchronize();
+    
+    float x_position = current_position[X_AXIS];
+    float y_position = current_position[Y_AXIS];
+    float z_position = current_position[Z_AXIS];
+
+    //Lift Z
+    if(code_seen('Z'))
+    {
+      z_position = code_value();
+    }
+    else
+    {
+      z_position = 125;
+    }
+    //Move XY to side
+    if(code_seen('X'))
+    {
+      x_position = code_value();
+    }
+    else
+    {
+      x_position = 50;
+    }
+    if(code_seen('Y'))
+    {
+      y_position = code_value();
+    }
+    else
+    {
+      y_position = 175;
+    }
+    
+    gcode_M778(x_position, y_position, z_position);
+     
+    }
+    break;
+
+        /*!
+    ### M779 - Routine to fill with inert material hopper for testing purposes only
+    */
+  case 779: //Inert purge X[pos] Y[pos] Z[relative lift]]
+   {
+    st_synchronize();
+    
+    float x_position = current_position[X_AXIS];
+    float y_position = current_position[Y_AXIS];
+    float z_position = current_position[Z_AXIS];
+
+    //Lift Z
+    if(code_seen('Z'))
+    {
+      z_position = code_value();
+    }
+    else
+    {
+      z_position = 125;
+    }
+    //Move XY to side
+    if(code_seen('X'))
+    {
+      x_position = code_value();
+    }
+    else
+    {
+      x_position = 50;
+    }
+    if(code_seen('Y'))
+    {
+      y_position = code_value();
+    }
+    else
+    {
+      y_position = 175;
+    }
+    
+    gcode_M779(x_position, y_position, z_position);
      
     }
     break;
