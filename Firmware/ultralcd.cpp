@@ -2814,6 +2814,54 @@ void lcd_move_e()
 	}
 }
 
+void lcd_move_RPM()
+{ 
+  if (degHotend0() > EXTRUDE_MINTEMP)
+  {
+    if (lcd_encoder != 0)
+    {
+      refresh_cmd_timeout();
+      if (! planner_queue_full())
+      {
+        float RPM = float((int)lcd_encoder)*move_menu_scale;
+        float DriveRadius = 7.3/2; //mm
+        //*12 to accound for the planetary gear box
+        // /10 to allow for a finer adjustment
+        float TestFeedRate = (((RPM * 2 *3.14 * DriveRadius)/60)*12)/10;
+    
+        if (LCD_CLICKED)
+        {
+          
+              menu_draw_float31(PSTR("RPM:"), RPM/10);
+              
+              int i; //Desinates the number of revolutions
+              for( i=0; i < 10000; ++i)
+              {
+                current_position[E_AXIS] += 22.86; //48 is distance for one revolution
+                lcd_encoder = 0;
+                plan_buffer_line_curposXYZE(TestFeedRate);
+                st_synchronize();
+                lcd_draw_update = 1;
+                
+              }
+        }
+      }
+    }
+    if (lcd_draw_update)
+    {
+        lcd_set_cursor(0, 1);
+      // Note: the colon behind the text is necessary to greatly shorten
+      // the implementation of menu_draw_float31
+      menu_draw_float31(PSTR("RPM(0.1X):"), float((int)lcd_encoder)*move_menu_scale);
+    }
+  }
+  else
+  {
+    show_preheat_nozzle_warning();
+    lcd_return_to_status();
+  }
+}
+
 
 //! @brief Show measured Y distance of front calibration points from Y_MIN_POS
 //! If those points are detected too close to edge of reachable area, their confidence is lowered.
@@ -4232,7 +4280,8 @@ void lcd_move_menu_axis()
 	MENU_ITEM_SUBMENU_P(_i("Move X"), lcd_move_x);////MSG_MOVE_X c=18
 	MENU_ITEM_SUBMENU_P(_i("Move Y"), lcd_move_y);////MSG_MOVE_Y c=18
 	MENU_ITEM_SUBMENU_P(_i("Move Z"), lcd_move_z);////MSG_MOVE_Z c=18
-	MENU_ITEM_SUBMENU_P(_T(MSG_EXTRUDER), lcd_move_e);
+	MENU_ITEM_SUBMENU_P(_i("RPM Testing"), lcd_move_RPM);
+	//MENU_ITEM_SUBMENU_P(_T(MSG_EXTRUDER), lcd_move_e);
 	MENU_END();
 }
 
@@ -6551,7 +6600,8 @@ static void lcd_main_menu()
     MENU_ITEM_BACK_P(_T(MSG_WATCH));
 if (!PRINTER_ACTIVE || isPrintPaused)
     {
-      MENU_ITEM_GCODE_P(_i("Fill Boom Nuggets"), PSTR("M777"));
+      MENU_ITEM_GCODE_P(_i("Fill Routine"), PSTR("M778"));
+      MENU_ITEM_GCODE_P(_i("Purge Routine"), PSTR("M777"));
     }
 	
 #ifdef RESUME_DEBUG 
@@ -7979,7 +8029,7 @@ static bool lcd_selfcheck_check_heater(bool _isbed)
 
 	int _checked_snapshot = (_isbed) ? degBed() : degHotend(0);
 	int _opposite_snapshot = (_isbed) ? degHotend(0) : degBed();
-	int _cycles = (_isbed) ? 180 : 60; //~ 90s / 30s
+	int _cycles = (_isbed) ? 180 : 120; // 180 : 60 Original //~ 90s / 30s
 
 	target_temperature[0] = (_isbed) ? 0 : 200;
 	target_temperature_bed = (_isbed) ? 100 : 0;

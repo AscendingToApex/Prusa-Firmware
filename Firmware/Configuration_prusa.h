@@ -1,4 +1,4 @@
-#ifndef CONFIGURATION_PRUSA_H
+ #ifndef CONFIGURATION_PRUSA_H
 #define CONFIGURATION_PRUSA_H
 
 #include <limits.h>
@@ -61,7 +61,7 @@
 
 // Home position
 #define MANUAL_X_HOME_POS 0
-#define MANUAL_Y_HOME_POS -2.2
+#define MANUAL_Y_HOME_POS -7.4 //-2.2 Original
 #define MANUAL_Z_HOME_POS 0.2
 
 // Travel limits after homing
@@ -69,7 +69,7 @@
 #define X_MIN_POS 0
 #define Y_MAX_POS 212.5
 #define Y_MIN_POS -4 //orig -4
-#define Z_MAX_POS 210
+#define Z_MAX_POS 200 //210 Original
 #define Z_MIN_POS 0.15
 
 // Canceled home position
@@ -92,7 +92,7 @@
 /**
  * [0,0] steel sheet print area point Y coordinate in bed print area coordinates
  */
-#define SHEET_PRINT_ZERO_REF_Y -2.f
+#define SHEET_PRINT_ZERO_REF_Y 25.f //-2.f Original
 
 #define DEFAULT_MAX_FEEDRATE                {200, 200, 12, 120}      // (mm/sec)   max feedrate (M203)
 #define DEFAULT_MAX_FEEDRATE_SILENT         {100, 100, 12, 120}      // (mm/sec)   max feedrate (M203), silent mode
@@ -283,10 +283,10 @@
 #define TMC2130_SG_THRS_HOME {3, 3, TMC2130_SG_THRS_Z, TMC2130_SG_THRS_E}
 
 //new settings is possible for vsense = 1, running current value > 31 set vsense to zero and shift both currents by 1 bit right (Z axis only)
-#define TMC2130_CURRENTS_H {16, 20, 35, 30}  // default holding currents for all axes
+#define TMC2130_CURRENTS_H {16, 20, 35, 95} // {16,20,35,30} // default holding currents for all axes
 #define TMC2130_CURRENTS_FARM 36             // E 805 mA peak for ECool/farm mode
-#define TMC2130_CURRENTS_R {16, 20, 35, 30}  // default running currents for all axes
-#define TMC2130_CURRENTS_R_HOME {8, 10, 20, 18}  // homing running currents for all axes
+#define TMC2130_CURRENTS_R {16, 20, 35, 95}  // {16,20,35,30}// default running currents for all axes
+#define TMC2130_CURRENTS_R_HOME {8, 10, 20, 95}  // {8,10,20,18}// homing running currents for all axes
 
 #define TMC2130_STEALTH_Z
 #define TMC2130_DEDGE_STEPPING
@@ -347,7 +347,7 @@
 #endif
 
 // Extrude mintemp
-#define EXTRUDE_MINTEMP 175
+#define EXTRUDE_MINTEMP 30 //175 ORIGINAL
 
 // Extruder cooling fans
 #define EXTRUDER_0_AUTO_FAN_PIN   8
@@ -423,7 +423,7 @@
  *------------------------------------*/
 
 // Motor Current settings for Einsy/tmc = 0..63
-#define MOTOR_CURRENT_PWM_RANGE 63
+#define MOTOR_CURRENT_PWM_RANGE 95
 
 /*------------------------------------
  BED SETTINGS
@@ -454,8 +454,8 @@
 #define MESH_HOME_Z_CALIB 0.2
 #define MESH_HOME_Z_SEARCH 5.0f           // Z lift for homing, mesh bed leveling etc.
 
-#define X_PROBE_OFFSET_FROM_EXTRUDER 2     // Z probe to nozzle X offset: -left  +right
-#define Y_PROBE_OFFSET_FROM_EXTRUDER 5     // Z probe to nozzle Y offset: -front +behind
+#define X_PROBE_OFFSET_FROM_EXTRUDER 23 //2     // Z probe to nozzle X offset: -left  +right
+#define Y_PROBE_OFFSET_FROM_EXTRUDER 9 //5    // Z probe to nozzle Y offset: -front +behind
 #define Z_PROBE_OFFSET_FROM_EXTRUDER -0.4  // Z probe to nozzle Z offset: -below (always!)
 #endif
 
