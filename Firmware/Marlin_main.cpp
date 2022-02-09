@@ -4110,7 +4110,7 @@ static void gcode_M778(float x_position, float y_position, float z_position)
   while (lcd_change_fil_state != 1)
   {
     KEEPALIVE_STATE(PAUSED_FOR_USER);
-    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("10 minute Countdown to exit room begin?"),
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Countdown to exit room begin?"),
             false, true);
    }
    lcd_update_enable(true);
@@ -4122,13 +4122,14 @@ static void gcode_M778(float x_position, float y_position, float z_position)
 
   //Delay between priming and filling with Boom nuggets <postEngTranDwell>
   //======================================================================
-  int delayTime = 2; //Minutes
+  int delayTime = 1; //Minutes
   //======================================================================
+  int dwellFeedRate = (135/60)*delayTime;
   
-  for(i=0; i < (delayTime*6); ++i)
-  {
-    _delay(10000);
-  }
+  //for(i=0; i < (delayTime*6); ++i)
+  //{
+  //  _delay_us(10000);
+  //}
 
  
   //Move to boom staging area
@@ -4142,10 +4143,12 @@ static void gcode_M778(float x_position, float y_position, float z_position)
   lastpos[Y_AXIS] = current_position[Y_AXIS];
   lastpos[Z_AXIS] = current_position[Z_AXIS];
 
+  
+
   //Move XYZ to under fill hopper
   current_position[Z_AXIS] = 160;
   current_position[X_AXIS] = 248;
-  plan_buffer_line_curposXYZE(200);
+  plan_buffer_line_curposXYZE(dwellFeedRate);//200
   st_synchronize();
 
   //Move XYZ to under fill hopper
@@ -4363,7 +4366,7 @@ static void gcode_M779(float x_position, float y_position, float z_position)
   while (lcd_change_fil_state != 1)
   {
     KEEPALIVE_STATE(PAUSED_FOR_USER);
-    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("10 minute Countdown to exit room begin?"),
+    lcd_change_fil_state = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Countdown to exit room begin?"),
             false, true);
    }
    lcd_update_enable(true);
